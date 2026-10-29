@@ -1,102 +1,113 @@
 import 'package:flutter/material.dart';
-import 'package:papeleria_app/screens/entradas_screen.dart';
+import 'entradas_screen.dart';
 import 'inventory_screen.dart';
-import 'ventas_screen.dart';
+import 'ventas_screen.dart'; // Tu archivo de ventas que vimos en el explorador
 
 class MainLayout extends StatefulWidget {
-  const MainLayout({super.key});
+  final VoidCallback onThemeToggle;
+  final bool isUltraDark;
+
+  const MainLayout({
+    super.key,
+    required this.onThemeToggle,
+    required this.isUltraDark,
+  });
 
   @override
   State<MainLayout> createState() => _MainLayoutState();
 }
 
 class _MainLayoutState extends State<MainLayout> {
+  // El índice 0 corresponde a Ventas, asegurando que sea la pantalla predeterminada al arrancar
   int _selectedIndex = 0;
+
+  // Arreglo con las instancias de tus pantallas limpias
+  final List<Widget> _screens = const [
+    VentasScreen(),
+    InventoryScreen(),
+    EntradasScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    // LayoutBuilder nos dice cuánto espacio hay disponible en tiempo real
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Si el ancho es mayor a 700 píxeles, extendemos el menú
-        bool esPantallaGrande = constraints.maxWidth > 700;
+    return Scaffold(
+      // Mantenemos un AppBar global minimalista únicamente para el botón del Drawer
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
+      drawer: Drawer(
+        child: Column(
+          children: [
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                color: Colors.blueAccent,
+              ),
 
-        return Scaffold(
-          body: Row(
-            children: [
-              NavigationRail(
-                // Aquí está el truco: se extiende solo si hay espacio
-                extended: esPantallaGrande, 
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: (int index) {
-                  setState(() {
-                    _selectedIndex = index;
-                  });
-                },
-                backgroundColor: Colors.blueGrey[50],
-                leading: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    // Si el menú está contraído, hacemos el logo más chiquito
-                    Image.asset(
-                      'assets/LOGO.png',
-                      width: esPantallaGrande ? 100 : 40,
-                      height: esPantallaGrande ? 100 : 40,
-                      errorBuilder: (context, error, stackTrace) =>
-                          Icon(Icons.store, size: esPantallaGrande ? 50 : 30),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
-                destinations: const [
-                  NavigationRailDestination(
-                    icon: Icon(Icons.point_of_sale_outlined),
-                    selectedIcon: Icon(Icons.point_of_sale, color: Colors.blue),
-                    label: Text('Nueva Venta'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.inventory_2_outlined),
-                    selectedIcon: Icon(Icons.inventory, color: Colors.blue),
-                    label: Text('Inventario'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.add_box_outlined),
-                    selectedIcon: Icon(Icons.add_box, color: Colors.blue),
-                    label: Text('Entradas'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.warning_amber_rounded),
-                    selectedIcon: Icon(Icons.warning, color: Colors.orange),
-                    label: Text('Stock Bajo'),
-                  ),
-                ],
+              child: Center(
+                /*child: Text(
+                  'Menú CIPE',
+                  style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                ),*/
+                child: Image.asset('assets/LOGO.png'),
               ),
-              const VerticalDivider(thickness: 1, width: 1),
-              Expanded(
-                child: Container(
-                  color: Colors.white,
-                  child: _construirPantallaActiva(),
+              //child: Image(image: ../assets/LOGO.png),
+            ),
+            ListTile(
+              leading: const Icon(Icons.point_of_sale),
+              title: const Text('Punto de Venta'),
+              selected: _selectedIndex == 0,
+              onTap: () {
+                setState(() => _selectedIndex = 0);
+                Navigator.pop(context); 
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.inventory_2),
+              title: const Text('Inventario Total'),
+              selected: _selectedIndex == 1,
+              onTap: () {
+                setState(() => _selectedIndex = 1);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_box),
+              title: const Text('Nueva Mercancía'),
+              selected: _selectedIndex == 2,
+              onTap: () {
+                setState(() => _selectedIndex = 2);
+                Navigator.pop(context);
+              },
+            ),
+            
+            const Spacer(), 
+            const Divider(),
+            
+            ExpansionTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Configuración'),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0),
+                  child: SwitchListTile(
+                    title: const Text('Modo Ultra Dark'),
+                    secondary: const Icon(Icons.contrast),
+                    value: widget.isUltraDark,
+                    onChanged: (bool value) {
+                      widget.onThemeToggle();
+                    },
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+      // Muestra la pantalla correspondiente al índice seleccionado
+      body: _screens[_selectedIndex],
     );
-  }
-    
-  Widget _construirPantallaActiva() {
-    switch (_selectedIndex) {
-      case 0:
-        return const VentasScreen();
-      case 1:
-        return const InventoryScreen();
-      case 2:
-        return const EntradasScreen();
-      case 3:
-        return const Center(child: Text('Stock Bajo'));
-      default:
-        return const Center(child: Text('Seleccione una opción'));
-    }
   }
 }

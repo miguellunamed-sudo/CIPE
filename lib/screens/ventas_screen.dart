@@ -173,89 +173,109 @@ class _VentasScreenState extends State<VentasScreen> {
         const VerticalDivider(width: 1),
 
         // PARTE DERECHA: Ticket interactivo
-        Expanded(
-          flex: 2, // Le damos un poco más de espacio para que quepan los botones
-          child: Container(
-            color: Colors.blueGrey[50],
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('Ticket de Venta', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-                const Divider(thickness: 2),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _carrito.length,
-                    itemBuilder: (context, i) {
-                      final item = _carrito[i];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        child: ListTile(
-                          title: Text(item.producto.nombre),
-                          subtitle: Text('\$${item.producto.precioVenta.toStringAsFixed(2)} c/u'),
-                          // AQUÍ AGREGAMOS LOS BOTONES DE + Y -
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
-                                onPressed: () => _restarCantidad(i),
-                              ),
-                              Text('${item.cantidad}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                              IconButton(
-                                icon: const Icon(Icons.add_circle_outline, color: Colors.green),
-                                onPressed: () => _sumarCantidad(i),
-                              ),
-                              const SizedBox(width: 10),
-                              SizedBox(
-                                width: 70, // Ancho fijo para que los precios se alineen
-                                child: Text('\$${item.subtotal.toStringAsFixed(2)}', 
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                  textAlign: TextAlign.right,
+        Container(
+          width: 450, // Ancho fijo en lugar de Expanded para simular un panel lateral real
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface, // Se adapta al modo Lite y Ultra Dark
+            border: Border(left: BorderSide(color: Colors.grey.withOpacity(0.2), width: 2)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Ticket de Venta', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+                  Icon(Icons.receipt_long, color: Theme.of(context).colorScheme.primary, size: 30),
+                ],
+              ),
+              const Divider(thickness: 2, height: 30),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _carrito.length,
+                  itemBuilder: (context, i) {
+                    final item = _carrito[i];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 15),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Controles de cantidad agrupados
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            ),
+                            child: Row(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.remove, size: 22),
+                                  color: Colors.redAccent,
+                                  onPressed: () => _restarCantidad(i),
                                 ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                                onPressed: () => _eliminarDelCarrito(i),
-                              ),
-                            ],
+                                Text('${item.cantidad}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                                IconButton(
+                                  icon: const Icon(Icons.add, size: 22),
+                                  color: Colors.green,
+                                  onPressed: () => _sumarCantidad(i),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                          const SizedBox(width: 15),
+                          // Detalles del producto
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.producto.nombre, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                Text('\$${item.producto.precioVenta.toStringAsFixed(2)} c/u', style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                              ],
+                            ),
+                          ),
+                          // Subtotal y botón de eliminar
+                          Text('\$${item.subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                            onPressed: () => _eliminarDelCarrito(i),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-                const Divider(thickness: 2),
-                Container(
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.blue.shade100)
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('TOTAL:', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                      Text('\$${_totalVenta.toStringAsFixed(2)}', 
-                        style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.blue)),
-                    ],
-                  ),
+              ),
+              const Divider(thickness: 2, height: 30),
+              // Contenedor de TOTAL dinámico (sin color blanco fijo)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(15),
                 ),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: _carrito.isEmpty ? null : _finalizarVenta,
-                  icon: const Icon(Icons.print, size: 28),
-                  label: const Text('COBRAR Y GUARDAR TICKET', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('TOTAL:', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                    Text('\$${_totalVenta.toStringAsFixed(2)}', style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  elevation: 4,
+                ),
+                onPressed: _carrito.isEmpty ? null : _finalizarVenta,
+                icon: const Icon(Icons.print, size: 30),
+                label: const Text('COBRAR Y GUARDAR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+              ),
+            ],
           ),
         ),
       ],

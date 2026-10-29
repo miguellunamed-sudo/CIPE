@@ -46,7 +46,7 @@ class _EntradasScreenState extends State<EntradasScreen> {
   }
 
   Future<void> _guardarProducto() async {
-    if (_nombreCtrl.text.isEmpty) return; // Validación básica
+    if (_nombreCtrl.text.isEmpty) return;
 
     String? codigoFinal = _codigoCtrl.text.trim().isEmpty ? null : _codigoCtrl.text.trim();
 
@@ -67,7 +67,6 @@ class _EntradasScreenState extends State<EntradasScreen> {
       );
       await conn.close();
 
-      // Limpiar formulario y avisar que se guardó
       _nombreCtrl.clear();
       _codigoCtrl.clear();
       _stockCtrl.text = '0';
@@ -89,70 +88,78 @@ class _EntradasScreenState extends State<EntradasScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Scaffold sin backgroundColor fijo para heredar el Dark Mode
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        title: const Text('Registro de Nueva Mercancía', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
       body: Center(
         child: SingleChildScrollView(
           child: Container(
-            width: 600, // Limitamos el ancho para que no se vea estirado en escritorio
+            width: 700, 
             padding: const EdgeInsets.all(20),
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              child: Padding(
-                padding: const EdgeInsets.all(30.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Icon(Icons.add_box, size: 60, color: Colors.blueGrey),
-                    const SizedBox(height: 20),
-                    TextField(controller: _nombreCtrl, decoration: const InputDecoration(labelText: 'Nombre del Producto', border: OutlineInputBorder())),
-                    const SizedBox(height: 15),
-                    TextField(controller: _codigoCtrl, decoration: const InputDecoration(labelText: 'Código de Barras (Opcional)', border: OutlineInputBorder())),
-                    const SizedBox(height: 15),
-                    Row(
+            child: Column(
+              children: [
+                // Encabezado moderno sin el recuadro tosco
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 20),
+                  child: Text(
+                    'Registro de Nueva Mercancía',
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Card(
+                  elevation: 6,
+                  // El Card heredará automáticamente el color gris oscuro o negro según el tema
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(child: TextField(controller: _costoCtrl, decoration: const InputDecoration(labelText: 'Costo de Compra', border: OutlineInputBorder(), prefixText: '\$ '))),
-                        const SizedBox(width: 15),
-                        Expanded(child: TextField(controller: _margenCtrl, decoration: const InputDecoration(labelText: '% Margen (Por defecto 40%)', border: OutlineInputBorder()))),
+                        const Icon(Icons.add_box, size: 80, color: Colors.blueAccent),
+                        const SizedBox(height: 30),
+                        TextField(controller: _nombreCtrl, decoration: const InputDecoration(labelText: 'Nombre del Producto', border: OutlineInputBorder())),
+                        const SizedBox(height: 20),
+                        TextField(controller: _codigoCtrl, decoration: const InputDecoration(labelText: 'Código de Barras (Opcional)', border: OutlineInputBorder())),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(child: TextField(controller: _costoCtrl, decoration: const InputDecoration(labelText: 'Costo de Compra', border: OutlineInputBorder(), prefixText: '\$ '))),
+                            const SizedBox(width: 20),
+                            Expanded(child: TextField(controller: _margenCtrl, decoration: const InputDecoration(labelText: '% Margen', border: OutlineInputBorder()))),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        TextField(controller: _stockCtrl, decoration: const InputDecoration(labelText: 'Cantidad en Stock', border: OutlineInputBorder())),
+                        const SizedBox(height: 20),
+                        DropdownButtonFormField<int>(
+                          decoration: const InputDecoration(labelText: 'Proveedor', border: OutlineInputBorder()),
+                          items: _proveedores.map((p) => DropdownMenuItem(value: p.id, child: Text(p.nombre))).toList(),
+                          onChanged: (val) => _selectedProv = val,
+                          value: _selectedProv,
+                        ),
+                        const SizedBox(height: 20),
+                        DropdownButtonFormField<int>(
+                          decoration: const InputDecoration(labelText: 'Ubicación Física', border: OutlineInputBorder()),
+                          items: _ubicaciones.map((u) => DropdownMenuItem(value: u.id, child: Text(u.nombre))).toList(),
+                          onChanged: (val) => _selectedUbi = val,
+                          value: _selectedUbi,
+                        ),
+                        const SizedBox(height: 40),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            backgroundColor: Colors.blueAccent,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: _guardarProducto,
+                          icon: const Icon(Icons.save),
+                          label: const Text('GUARDAR PRODUCTO EN INVENTARIO', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 15),
-                    TextField(controller: _stockCtrl, decoration: const InputDecoration(labelText: 'Cantidad en Stock', border: OutlineInputBorder())),
-                    const SizedBox(height: 15),
-                    DropdownButtonFormField<int>(
-                      decoration: const InputDecoration(labelText: 'Proveedor', border: OutlineInputBorder()),
-                      items: _proveedores.map((p) => DropdownMenuItem(value: p.id, child: Text(p.nombre))).toList(),
-                      onChanged: (val) => _selectedProv = val,
-                      value: _selectedProv,
-                    ),
-                    const SizedBox(height: 15),
-                    DropdownButtonFormField<int>(
-                      decoration: const InputDecoration(labelText: 'Ubicación Física', border: OutlineInputBorder()),
-                      items: _ubicaciones.map((u) => DropdownMenuItem(value: u.id, child: Text(u.nombre))).toList(),
-                      onChanged: (val) => _selectedUbi = val,
-                      value: _selectedUbi,
-                    ),
-                    const SizedBox(height: 30),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        backgroundColor: Colors.blueAccent,
-                        foregroundColor: Colors.white,
-                      ),
-                      onPressed: _guardarProducto,
-                      icon: const Icon(Icons.save),
-                      label: const Text('GUARDAR PRODUCTO EN INVENTARIO', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
