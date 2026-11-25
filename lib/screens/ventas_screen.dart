@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:papeleria_app/models/product_model.dart';
 import 'package:papeleria_app/services/api_service.dart';
 
-// Clase auxiliar para manejar las cantidades y subtotales en el ticket
 class CartItem {
   final Product producto;
   int cantidad;
@@ -28,6 +27,7 @@ class _VentasScreenState extends State<VentasScreen> {
   List<Product> _sugerencias = [];
   double _totalVenta = 0.0;
   bool _buscando = false;
+  bool _cobrando = false;
 
   @override
   void initState() {
@@ -42,7 +42,6 @@ class _VentasScreenState extends State<VentasScreen> {
     super.dispose();
   }
 
-  // Carga los productos una vez para filtrar instantáneamente al teclear
   Future<void> _cargarCatalogo() async {
     try {
       final productos = await ApiService.getAllProducts();
@@ -51,9 +50,7 @@ class _VentasScreenState extends State<VentasScreen> {
           _catalogoCompleto = productos;
         });
       }
-    } catch (_) {
-      // Si falla la carga inicial, el escáner por código sigue funcionando vía API
-    }
+    } catch (_) {}
   }
 
   void _calcularTotal() {
@@ -79,12 +76,8 @@ class _VentasScreenState extends State<VentasScreen> {
     _barcodeFocusNode.requestFocus();
   }
 
-  // --- FILTRADO EN VIVO AL TECLEAR ---
-
   void _onSearchChanged(String texto) {
     final q = texto.trim().toLowerCase();
-
-    // Exige al menos 2 caracteres para no parpadear durante un escaneo rápido
     if (q.length < 2) {
       if (_sugerencias.isNotEmpty) {
         setState(() => _sugerencias = []);
@@ -101,13 +94,10 @@ class _VentasScreenState extends State<VentasScreen> {
     });
   }
 
-  // --- LÓGICA DEL ESCÁNER (AL DAR ENTER) ---
-
   void _onScan(String code) async {
     final limpio = code.trim();
     if (limpio.isEmpty || _buscando) return;
 
-    // 1. Si coincide exacto en memoria (código o nombre único), agrégalo al instante
     final exacto = _catalogoCompleto.where(
       (p) =>
           (p.codigoBarras ?? '').toLowerCase() == limpio.toLowerCase() ||
@@ -118,13 +108,11 @@ class _VentasScreenState extends State<VentasScreen> {
       return;
     }
 
-    // 2. Si solo hay 1 sugerencia filtrada al dar Enter, agrégala directo
     if (_sugerencias.length == 1) {
       _agregarProductoAlTicket(_sugerencias.first);
       return;
     }
 
-    // 3. Respaldo: consulta directa a la API por si se registró recién
     _barcodeController.clear();
     _barcodeFocusNode.requestFocus();
     await _buscarYAgregarProducto(limpio);
@@ -134,7 +122,6 @@ class _VentasScreenState extends State<VentasScreen> {
     setState(() => _buscando = true);
     try {
       final productoNuevo = await ApiService.getProductByCodigo(codigo);
-
       if (!mounted) return;
 
       if (productoNuevo == null) {
@@ -171,8 +158,6 @@ class _VentasScreenState extends State<VentasScreen> {
     }
   }
 
-  // --- LÓGICA DEL CARRITO ---
-
   void _sumarCantidad(int index) {
     setState(() {
       _carrito[index].cantidad++;
@@ -198,8 +183,6 @@ class _VentasScreenState extends State<VentasScreen> {
     });
   }
 
-  bool _cobrando = false;
-
   Future<void> _finalizarVenta() async {
     if (_carrito.isEmpty || _cobrando) return;
 
@@ -207,12 +190,10 @@ class _VentasScreenState extends State<VentasScreen> {
 
     try {
       final itemsPayload = _carrito
-          .map(
-            (item) => {
-              'idArticulo': item.producto.id,
-              'cantidad': item.cantidad,
-            },
-          )
+          .map((item) => {
+                'idArticulo': item.producto.id,
+                'cantidad': item.cantidad,
+              })
           .toList();
 
       final ventaGuardada = await ApiService.registrarVenta(
@@ -227,7 +208,6 @@ class _VentasScreenState extends State<VentasScreen> {
         _calcularTotal();
       });
 
-      // Recarga el catálogo en segundo plano para actualizar stocks en pantalla
       await _cargarCatalogo();
 
       if (mounted) {
@@ -243,7 +223,10 @@ class _VentasScreenState extends State<VentasScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ $e'), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text('❌ $e'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     } finally {
@@ -259,9 +242,6 @@ class _VentasScreenState extends State<VentasScreen> {
     return Scaffold(
       body: Row(
         children: [
-          // ==========================================
-          // PARTE IZQUIERDA: Búsqueda, sugerencias y escáner
-          // ==========================================
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(30.0),
@@ -294,8 +274,7 @@ class _VentasScreenState extends State<VentasScreen> {
                     onSubmitted: _onScan,
                     style: const TextStyle(fontSize: 20),
                     decoration: InputDecoration(
-                      hintText:
-                          'Escanear código de barras o buscar por nombre...',
+                      hintText: 'Escanear código de barras o buscar por nombre...',
                       prefixIcon: const Icon(Icons.qr_code_scanner, size: 28),
                       suffixIcon: _buscando
                           ? const Padding(
@@ -303,21 +282,19 @@ class _VentasScreenState extends State<VentasScreen> {
                               child: SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                ),
+                                child: CircularProgressIndicator(strokeWidth: 2.5),
                               ),
                             )
                           : (_barcodeController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      _barcodeController.clear();
-                                      setState(() => _sugerencias = []);
-                                      _barcodeFocusNode.requestFocus();
-                                    },
-                                  )
-                                : null),
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _barcodeController.clear();
+                                    setState(() => _sugerencias = []);
+                                    _barcodeFocusNode.requestFocus();
+                                  },
+                                )
+                              : null),
                       filled: true,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
@@ -326,7 +303,6 @@ class _VentasScreenState extends State<VentasScreen> {
                     ),
                   ),
                   const SizedBox(height: 15),
-                  // Lista de sugerencias en vivo o estado vacío
                   Expanded(
                     child: _sugerencias.isNotEmpty
                         ? Card(
@@ -336,8 +312,7 @@ class _VentasScreenState extends State<VentasScreen> {
                             ),
                             child: ListView.separated(
                               itemCount: _sugerencias.length,
-                              separatorBuilder: (_, __) =>
-                                  const Divider(height: 1),
+                              separatorBuilder: (_, __) => const Divider(height: 1),
                               itemBuilder: (context, index) {
                                 final prod = _sugerencias[index];
                                 return ListTile(
@@ -384,13 +359,14 @@ class _VentasScreenState extends State<VentasScreen> {
                                 Icon(
                                   Icons.storefront,
                                   size: 80,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withOpacity(0.3),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withValues(alpha: 0.3),
                                 ),
                                 const SizedBox(height: 20),
                                 Text(
-                                  _barcodeController.text.isNotEmpty
+                                  _barcodeController.text.length >= 2
                                       ? 'Sin coincidencias para "${_barcodeController.text}"'
                                       : 'Escanea o escribe el nombre de un producto',
                                   style: TextStyle(
@@ -406,16 +382,12 @@ class _VentasScreenState extends State<VentasScreen> {
               ),
             ),
           ),
-
-          // ==========================================
-          // PARTE DERECHA: Ticket interactivo
-          // ==========================================
           Container(
             width: 450,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               border: Border(
-                left: BorderSide(color: Colors.grey.withOpacity(0.2), width: 2),
+                left: BorderSide(color: Colors.grey.withValues(alpha: 0.2), width: 2),
               ),
             ),
             padding: const EdgeInsets.all(20),
@@ -427,10 +399,7 @@ class _VentasScreenState extends State<VentasScreen> {
                   children: [
                     const Text(
                       'Ticket de Venta',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                     ),
                     Icon(
                       Icons.receipt_long,
@@ -455,17 +424,15 @@ class _VentasScreenState extends State<VentasScreen> {
                                   Container(
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(10),
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary.withOpacity(0.1),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withValues(alpha: 0.1),
                                     ),
                                     child: Row(
                                       children: [
                                         IconButton(
-                                          icon: const Icon(
-                                            Icons.remove,
-                                            size: 22,
-                                          ),
+                                          icon: const Icon(Icons.remove, size: 22),
                                           color: Colors.redAccent,
                                           onPressed: () => _restarCantidad(i),
                                         ),
@@ -487,8 +454,7 @@ class _VentasScreenState extends State<VentasScreen> {
                                   const SizedBox(width: 15),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           item.producto.nombre,
@@ -533,9 +499,10 @@ class _VentasScreenState extends State<VentasScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.1),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: Row(
@@ -543,10 +510,7 @@ class _VentasScreenState extends State<VentasScreen> {
                     children: [
                       const Text(
                         'TOTAL:',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                       Text(
                         '\$${_totalVenta.toStringAsFixed(2)}',
@@ -570,11 +534,20 @@ class _VentasScreenState extends State<VentasScreen> {
                     ),
                     elevation: 4,
                   ),
-                  onPressed: _carrito.isEmpty ? null : _finalizarVenta,
-                  icon: const Icon(Icons.print, size: 30),
-                  label: const Text(
-                    'COBRAR Y GUARDAR',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                  onPressed: (_carrito.isEmpty || _cobrando) ? null : _finalizarVenta,
+                  icon: _cobrando
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : const Icon(Icons.print, size: 30),
+                  label: Text(
+                    _cobrando ? 'PROCESANDO COBRO...' : 'COBRAR Y GUARDAR',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                 ),
               ],

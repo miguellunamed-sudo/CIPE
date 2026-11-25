@@ -67,7 +67,6 @@ class _EntradasScreenState extends State<EntradasScreen> {
             .toList();
       });
     } catch (_) {
-      // Si aún no hay datos o falla la red, los dropdowns quedan opcionales
     } finally {
       if (mounted) setState(() => _cargandoCatalogos = false);
     }

@@ -10,43 +10,54 @@ class InventoryScreen extends StatefulWidget {
 }
 
 class _InventoryScreenState extends State<InventoryScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  late Future<List<Product>> _productsFuture;
+  final _searchCtrl = TextEditingController();
+  List<Product> _todos = [];
+  List<Product> _filtrados = [];
+  bool _cargando = true;
 
   @override
   void initState() {
     super.initState();
-    _productsFuture = fetchProducts('');
+    _cargarInventario();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
-  Future<List<Product>> fetchProducts(String query) async {
-    final allProducts = await ApiService.getAllProducts();
-
-    if (query.trim().isEmpty) {
-      allProducts.sort((a, b) => a.nombre.compareTo(b.nombre));
-      return allProducts;
+  Future<void> _cargarInventario() async {
+    setState(() => _cargando = true);
+    try {
+      final lista = await ApiService.getAllProducts();
+      if (!mounted) return;
+      setState(() {
+        _todos = lista;
+        _filtrados = lista;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar inventario: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cargando = false);
     }
-
-    final q = query.trim().toLowerCase();
-    final filtered = allProducts.where((p) {
-      final matchNombre = p.nombre.toLowerCase().contains(q);
-      final matchCodigo = (p.codigoBarras ?? '').toLowerCase().contains(q);
-      return matchNombre || matchCodigo;
-    }).toList();
-
-    filtered.sort((a, b) => a.nombre.compareTo(b.nombre));
-    return filtered;
   }
 
-  void _refreshList([String? query]) {
+  void _filtrar(String q) {
+    final query = q.trim().toLowerCase();
     setState(() {
-      _productsFuture = fetchProducts(query ?? _searchController.text);
+      if (query.isEmpty) {
+        _filtrados = _todos;
+      } else {
+        _filtrados = _todos.where((p) {
+          return p.nombre.toLowerCase().contains(query) ||
+              (p.codigoBarras ?? '').toLowerCase().contains(query);
+        }).toList();
+      }
     });
   }
 
@@ -54,7 +65,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.all(30.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -65,83 +76,64 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   'Inventario Total',
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 ),
-                IconButton(
+                IconButton.filledTonal(
+                  onPressed: _cargarInventario,
+                  icon: const Icon(Icons.refresh),
                   tooltip: 'Actualizar inventario',
-                  icon: const Icon(Icons.refresh, size: 28),
-                  onPressed: () => _refreshList(),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             TextField(
-              controller: _searchController,
-              onChanged: (value) => _refreshList(value),
+              controller: _searchCtrl,
+              onChanged: _filtrar,
               decoration: InputDecoration(
                 hintText: 'Buscar por nombre o código de barras...',
                 prefixIcon: const Icon(Icons.search),
-                filled: true,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: FutureBuilder<List<Product>>(
-                future: _productsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        'Error al cargar inventario: ${snapshot.error}',
-                        style: const TextStyle(color: Colors.redAccent),
-                      ),
-                    );
-                  }
-
-                  final products = snapshot.data ?? [];
-                  if (products.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'No se encontraron productos.',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                    );
-                  }
-
-                  return ListView.separated(
-                    itemCount: products.length,
-                    separatorBuilder: (_, __) => const Divider(),
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          child: Text('${product.stockActual}'),
+              child: _cargando
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filtrados.isEmpty
+                      ? const Center(child: Text('No hay productos registrados'))
+                      : ListView.separated(
+                          itemCount: _filtrados.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final p = _filtrados[index];
+                            final bajoStock = p.stockActual <= p.stockMinimo;
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor:
+                                    bajoStock ? Colors.redAccent : Colors.blueAccent,
+                                child: Text(
+                                  '${p.stockActual}',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                              title: Text(
+                                p.nombre,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(
+                                'Código: ${p.codigoBarras ?? "Sin código"} | Costo: \$${p.costoCompra.toStringAsFixed(2)}',
+                              ),
+                              trailing: Text(
+                                '\$${p.precioVenta.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                        title: Text(
-                          product.nombre,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          'Código: ${product.codigoBarras ?? "Sin código"}',
-                        ),
-                        trailing: Text(
-                          '\$${product.precioVenta.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
             ),
           ],
         ),

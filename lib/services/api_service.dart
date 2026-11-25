@@ -35,7 +35,7 @@ class ApiService {
     }
   }
 
-  // 3. Crear un nuevo artículo en Neon vía Spring Boot
+  // 3. Crear un nuevo artículo
   static Future<Product> createProduct({
     required String nombre,
     String? codigoBarras,
@@ -73,7 +73,6 @@ class ApiService {
   }
 
   // 4. Registrar venta, descontar stock y guardar Kardex
-  // 4. Registrar venta, descontar stock y guardar Kardex
   static Future<dynamic> registrarVenta({
     int? idUsuario,
     required List<dynamic> items,
@@ -82,15 +81,16 @@ class ApiService {
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'idUsuario': idUsuario, 'items': items}),
+      body: jsonEncode({
+        'idUsuario': idUsuario,
+        'items': items,
+      }),
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception(
-        'Error al cobrar (${response.statusCode}): ${response.body}',
-      );
+      throw Exception('Error al cobrar (${response.statusCode}): ${response.body}');
     }
   }
 
