@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:papeleria_app/screens/entradas_screen.dart';
+import 'package:papeleria_app/screens/historial_ventas_screen.dart';
 import 'package:papeleria_app/screens/inventory_screen.dart';
 import 'package:papeleria_app/screens/ventas_screen.dart';
 
@@ -18,20 +19,18 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  // El índice 0 corresponde a Ventas, asegurando que sea la pantalla predeterminada al arrancar
   int _selectedIndex = 0;
 
-  // Arreglo con las instancias de tus pantallas limpias
   final List<Widget> _screens = const [
     VentasScreen(),
     InventoryScreen(),
     EntradasScreen(),
+    HistorialVentasScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Mantenemos un AppBar global minimalista únicamente para el botón del Drawer
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -44,15 +43,9 @@ class _MainLayoutState extends State<MainLayout> {
               decoration: const BoxDecoration(
                 color: Colors.blueAccent,
               ),
-
               child: Center(
-                /*child: Text(
-                  'Menú CIPE',
-                  style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
-                ),*/
                 child: Image.asset('assets/LOGO.png'),
               ),
-              //child: Image(image: ../assets/LOGO.png),
             ),
             ListTile(
               leading: const Icon(Icons.point_of_sale),
@@ -60,7 +53,7 @@ class _MainLayoutState extends State<MainLayout> {
               selected: _selectedIndex == 0,
               onTap: () {
                 setState(() => _selectedIndex = 0);
-                Navigator.pop(context); 
+                Navigator.pop(context);
               },
             ),
             ListTile(
@@ -81,10 +74,17 @@ class _MainLayoutState extends State<MainLayout> {
                 Navigator.pop(context);
               },
             ),
-            
-            const Spacer(), 
+            ListTile(
+              leading: const Icon(Icons.receipt_long),
+              title: const Text('Historial de Ventas'),
+              selected: _selectedIndex == 3,
+              onTap: () {
+                setState(() => _selectedIndex = 3);
+                Navigator.pop(context);
+              },
+            ),
+            const Spacer(),
             const Divider(),
-            
             ExpansionTile(
               leading: const Icon(Icons.settings),
               title: const Text('Configuración'),
@@ -106,7 +106,6 @@ class _MainLayoutState extends State<MainLayout> {
           ],
         ),
       ),
-      // Muestra la pantalla correspondiente al índice seleccionado
       body: _screens[_selectedIndex],
     );
   }

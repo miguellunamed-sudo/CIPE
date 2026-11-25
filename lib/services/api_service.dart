@@ -81,16 +81,15 @@ class ApiService {
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'idUsuario': idUsuario,
-        'items': items,
-      }),
+      body: jsonEncode({'idUsuario': idUsuario, 'items': items}),
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Error al cobrar (${response.statusCode}): ${response.body}');
+      throw Exception(
+        'Error al cobrar (${response.statusCode}): ${response.body}',
+      );
     }
   }
 
@@ -148,6 +147,18 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Error al crear ubicación (${response.statusCode})');
+    }
+  }
+
+  // 7. Listar historial de ventas
+  static Future<List<dynamic>> getVentas() async {
+    final uri = Uri.parse('$baseUrl/api/ventas');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else {
+      throw Exception('Error al cargar ventas (${response.statusCode})');
     }
   }
 }
