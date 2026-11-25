@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../database/db_connection.dart';
+import 'package:papeleria_app/services/api_service.dart';
 
 class DropdownItem {
   final int id;
@@ -20,84 +20,108 @@ class _EntradasScreenState extends State<EntradasScreen> {
   final _costoCtrl = TextEditingController(text: '0.0');
   final _margenCtrl = TextEditingController(text: '40.0');
   final _stockCtrl = TextEditingController(text: '0');
-  
+
   int? _selectedProv;
   int? _selectedUbi;
+  bool _guardando = false;
 
-  List<DropdownItem> _proveedores = [];
-  List<DropdownItem> _ubicaciones = [];
+  // Listas listas para cuando expongas /api/proveedores y /api/ubicaciones
+  final List<DropdownItem> _proveedores = [];
+  final List<DropdownItem> _ubicaciones = [];
 
   @override
-  void initState() {
-    super.initState();
-    _cargarCatalogos();
+  void dispose() {
+    _nombreCtrl.dispose();
+    _codigoCtrl.dispose();
+    _costoCtrl.dispose();
+    _margenCtrl.dispose();
+    _stockCtrl.dispose();
+    super.dispose();
   }
 
-  Future<void> _cargarCatalogos() async {
-    final conn = await DbConnection.connect();
-    final provs = await conn.execute('SELECT id_proveedor, nombre FROM proveedores');
-    final ubis = await conn.execute('SELECT id_ubicacion, descripcion FROM ubicaciones');
-    await conn.close();
-
-    setState(() {
-      _proveedores = provs.map((r) => DropdownItem(r[0] as int, r[1] as String)).toList();
-      _ubicaciones = ubis.map((r) => DropdownItem(r[0] as int, r[1] as String)).toList();
-    });
+  double get _precioFinalCalculado {
+    final costo = double.tryParse(_costoCtrl.text.trim()) ?? 0.0;
+    final margen = double.tryParse(_margenCtrl.text.trim()) ?? 0.0;
+    return costo * (1 + (margen / 100));
   }
 
   Future<void> _guardarProducto() async {
-    if (_nombreCtrl.text.isEmpty) return;
+    final nombre = _nombreCtrl.text.trim();
+    if (nombre.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ Ingresa el nombre del producto'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
-    String? codigoFinal = _codigoCtrl.text.trim().isEmpty ? null : _codigoCtrl.text.trim();
+    final codigoFinal = _codigoCtrl.text.trim().isEmpty
+        ? null
+        : _codigoCtrl.text.trim();
+    final costo = double.tryParse(_costoCtrl.text.trim()) ?? 0.0;
+    final margen = double.tryParse(_margenCtrl.text.trim()) ?? 0.0;
+    final stock = int.tryParse(_stockCtrl.text.trim()) ?? 0;
+    final precioFinal = double.parse(_precioFinalCalculado.toStringAsFixed(2));
+
+    setState(() => _guardando = true);
 
     try {
-      final conn = await DbConnection.connect();
-      await conn.execute(
-        'INSERT INTO productos (nombre, codigo_barras, precio_compra, margen_ganancia, stock_actual, id_proveedor, id_ubicacion) '
-        'VALUES (\$1, \$2, \$3, \$4, \$5, \$6, \$7)',
-        parameters: [
-          _nombreCtrl.text, 
-          codigoFinal, 
-          double.parse(_costoCtrl.text), 
-          double.parse(_margenCtrl.text), 
-          int.parse(_stockCtrl.text), 
-          _selectedProv, 
-          _selectedUbi
-        ],
+      await ApiService.createProduct(
+        nombre: nombre,
+        codigoBarras: codigoFinal,
+        costoCompra: costo,
+        margenGanancia: margen,
+        precioFinal: precioFinal,
+        stockActual: stock,
+        idProveedor: _selectedProv,
+        idUbicacion: _selectedUbi,
       );
-      await conn.close();
 
       _nombreCtrl.clear();
       _codigoCtrl.clear();
       _stockCtrl.text = '0';
       _costoCtrl.text = '0.0';
-      
+      setState(() {
+        _selectedProv = null;
+        _selectedUbi = null;
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Producto registrado con éxito'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('✅ Producto registrado en la nube con éxito'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Error al guardar: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('❌ Error al guardar: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _guardando = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Scaffold sin backgroundColor fijo para heredar el Dark Mode
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
           child: Container(
-            width: 700, 
+            width: 700,
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // Encabezado moderno sin el recuadro tosco
                 const Padding(
                   padding: EdgeInsets.only(bottom: 20),
                   child: Text(
@@ -107,41 +131,118 @@ class _EntradasScreenState extends State<EntradasScreen> {
                 ),
                 Card(
                   elevation: 6,
-                  // El Card heredará automáticamente el color gris oscuro o negro según el tema
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(40.0),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Icon(Icons.add_box, size: 80, color: Colors.blueAccent),
+                        const Icon(
+                          Icons.add_box,
+                          size: 80,
+                          color: Colors.blueAccent,
+                        ),
                         const SizedBox(height: 30),
-                        TextField(controller: _nombreCtrl, decoration: const InputDecoration(labelText: 'Nombre del Producto', border: OutlineInputBorder())),
+                        TextField(
+                          controller: _nombreCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Nombre del Producto',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
                         const SizedBox(height: 20),
-                        TextField(controller: _codigoCtrl, decoration: const InputDecoration(labelText: 'Código de Barras (Opcional)', border: OutlineInputBorder())),
+                        TextField(
+                          controller: _codigoCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Código de Barras (Opcional)',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
                         const SizedBox(height: 20),
                         Row(
                           children: [
-                            Expanded(child: TextField(controller: _costoCtrl, decoration: const InputDecoration(labelText: 'Costo de Compra', border: OutlineInputBorder(), prefixText: '\$ '))),
+                            Expanded(
+                              child: TextField(
+                                controller: _costoCtrl,
+                                keyboardType: TextInputType.number,
+                                onChanged: (_) => setState(() {}),
+                                decoration: const InputDecoration(
+                                  labelText: 'Costo de Compra',
+                                  border: OutlineInputBorder(),
+                                  prefixText: '\$ ',
+                                ),
+                              ),
+                            ),
                             const SizedBox(width: 20),
-                            Expanded(child: TextField(controller: _margenCtrl, decoration: const InputDecoration(labelText: '% Margen', border: OutlineInputBorder()))),
+                            Expanded(
+                              child: TextField(
+                                controller: _margenCtrl,
+                                keyboardType: TextInputType.number,
+                                onChanged: (_) => setState(() {}),
+                                decoration: const InputDecoration(
+                                  labelText: '% Margen',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Precio Final al Público: \$${_precioFinalCalculado.toStringAsFixed(2)}',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
                         const SizedBox(height: 20),
-                        TextField(controller: _stockCtrl, decoration: const InputDecoration(labelText: 'Cantidad en Stock', border: OutlineInputBorder())),
+                        TextField(
+                          controller: _stockCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Cantidad en Stock',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
                         const SizedBox(height: 20),
                         DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(labelText: 'Proveedor', border: OutlineInputBorder()),
-                          items: _proveedores.map((p) => DropdownMenuItem(value: p.id, child: Text(p.nombre))).toList(),
-                          onChanged: (val) => _selectedProv = val,
+                          decoration: const InputDecoration(
+                            labelText: 'Proveedor (Opcional)',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: _proveedores
+                              .map(
+                                (p) => DropdownMenuItem(
+                                  value: p.id,
+                                  child: Text(p.nombre),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) =>
+                              setState(() => _selectedProv = val),
                           value: _selectedProv,
                         ),
                         const SizedBox(height: 20),
                         DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(labelText: 'Ubicación Física', border: OutlineInputBorder()),
-                          items: _ubicaciones.map((u) => DropdownMenuItem(value: u.id, child: Text(u.nombre))).toList(),
-                          onChanged: (val) => _selectedUbi = val,
+                          decoration: const InputDecoration(
+                            labelText: 'Ubicación Física (Opcional)',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: _ubicaciones
+                              .map(
+                                (u) => DropdownMenuItem(
+                                  value: u.id,
+                                  child: Text(u.nombre),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) =>
+                              setState(() => _selectedUbi = val),
                           value: _selectedUbi,
                         ),
                         const SizedBox(height: 40),
@@ -151,9 +252,23 @@ class _EntradasScreenState extends State<EntradasScreen> {
                             backgroundColor: Colors.blueAccent,
                             foregroundColor: Colors.white,
                           ),
-                          onPressed: _guardarProducto,
-                          icon: const Icon(Icons.save),
-                          label: const Text('GUARDAR PRODUCTO EN INVENTARIO', style: TextStyle(fontWeight: FontWeight.bold)),
+                          onPressed: _guardando ? null : _guardarProducto,
+                          icon: _guardando
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.save),
+                          label: Text(
+                            _guardando
+                                ? 'GUARDANDO EN LA NUBE...'
+                                : 'GUARDAR PRODUCTO EN INVENTARIO',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ],
                     ),

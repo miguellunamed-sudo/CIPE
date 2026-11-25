@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'entradas_screen.dart';
-import 'inventory_screen.dart';
-import 'ventas_screen.dart'; // Tu archivo de ventas que vimos en el explorador
+import 'package:papeleria_app/screens/entradas_screen.dart';
+import 'package:papeleria_app/screens/inventory_screen.dart';
+import 'package:papeleria_app/screens/ventas_screen.dart';
 
 class MainLayout extends StatefulWidget {
   final VoidCallback onThemeToggle;
