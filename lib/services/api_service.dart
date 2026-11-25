@@ -93,4 +93,61 @@ class ApiService {
       );
     }
   }
+
+  // 5. Listar y crear Proveedores
+  static Future<List<dynamic>> getProveedores() async {
+    final uri = Uri.parse('$baseUrl/api/proveedores');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else {
+      throw Exception('Error al cargar proveedores (${response.statusCode})');
+    }
+  }
+
+  static Future<dynamic> createProveedor({
+    required String nombre,
+    String? telefono,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/proveedores');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'nombre': nombre, 'telefono': telefono}),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Error al crear proveedor (${response.statusCode})');
+    }
+  }
+
+  // 6. Listar y crear Ubicaciones
+  static Future<List<dynamic>> getUbicaciones() async {
+    final uri = Uri.parse('$baseUrl/api/ubicaciones');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else {
+      throw Exception('Error al cargar ubicaciones (${response.statusCode})');
+    }
+  }
+
+  static Future<dynamic> createUbicacion({required String descripcion}) async {
+    final uri = Uri.parse('$baseUrl/api/ubicaciones');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'descripcion': descripcion}),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Error al crear ubicación (${response.statusCode})');
+    }
+  }
 }

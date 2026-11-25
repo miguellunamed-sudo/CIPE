@@ -24,10 +24,16 @@ class _EntradasScreenState extends State<EntradasScreen> {
   int? _selectedProv;
   int? _selectedUbi;
   bool _guardando = false;
+  bool _cargandoCatalogos = true;
 
-  // Listas listas para cuando expongas /api/proveedores y /api/ubicaciones
-  final List<DropdownItem> _proveedores = [];
-  final List<DropdownItem> _ubicaciones = [];
+  List<DropdownItem> _proveedores = [];
+  List<DropdownItem> _ubicaciones = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarCatalogos();
+  }
 
   @override
   void dispose() {
@@ -37,6 +43,133 @@ class _EntradasScreenState extends State<EntradasScreen> {
     _margenCtrl.dispose();
     _stockCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _cargarCatalogos() async {
+    setState(() => _cargandoCatalogos = true);
+    try {
+      final provsData = await ApiService.getProveedores();
+      final ubisData = await ApiService.getUbicaciones();
+
+      if (!mounted) return;
+      setState(() {
+        _proveedores = provsData
+            .map((p) => DropdownItem(
+                  (p['idProveedor'] ?? 0) as int,
+                  (p['nombre'] ?? '') as String,
+                ))
+            .toList();
+        _ubicaciones = ubisData
+            .map((u) => DropdownItem(
+                  (u['idUbicacion'] ?? 0) as int,
+                  (u['descripcion'] ?? '') as String,
+                ))
+            .toList();
+      });
+    } catch (_) {
+      // Si aún no hay datos o falla la red, los dropdowns quedan opcionales
+    } finally {
+      if (mounted) setState(() => _cargandoCatalogos = false);
+    }
+  }
+
+  Future<void> _mostrarDialogoNuevoProveedor() async {
+    final nombreCtrl = TextEditingController();
+    final telCtrl = TextEditingController();
+
+    final creado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nuevo Proveedor'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nombreCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del proveedor',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: telCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Teléfono (opcional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nombreCtrl.text.trim().isEmpty) return;
+              final nuevo = await ApiService.createProveedor(
+                nombre: nombreCtrl.text.trim(),
+                telefono: telCtrl.text.trim().isEmpty ? null : telCtrl.text.trim(),
+              );
+              if (ctx.mounted) {
+                _selectedProv = (nuevo['idProveedor'] ?? 0) as int;
+                Navigator.pop(ctx, true);
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+
+    if (creado == true) {
+      await _cargarCatalogos();
+    }
+  }
+
+  Future<void> _mostrarDialogoNuevaUbicacion() async {
+    final descCtrl = TextEditingController();
+
+    final creada = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nueva Ubicación'),
+        content: TextField(
+          controller: descCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Ej. Pasillo A - Estante 2',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (descCtrl.text.trim().isEmpty) return;
+              final nueva = await ApiService.createUbicacion(
+                descripcion: descCtrl.text.trim(),
+              );
+              if (ctx.mounted) {
+                _selectedUbi = (nueva['idUbicacion'] ?? 0) as int;
+                Navigator.pop(ctx, true);
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+
+    if (creada == true) {
+      await _cargarCatalogos();
+    }
   }
 
   double get _precioFinalCalculado {
@@ -57,9 +190,8 @@ class _EntradasScreenState extends State<EntradasScreen> {
       return;
     }
 
-    final codigoFinal = _codigoCtrl.text.trim().isEmpty
-        ? null
-        : _codigoCtrl.text.trim();
+    final codigoFinal =
+        _codigoCtrl.text.trim().isEmpty ? null : _codigoCtrl.text.trim();
     final costo = double.tryParse(_costoCtrl.text.trim()) ?? 0.0;
     final margen = double.tryParse(_margenCtrl.text.trim()) ?? 0.0;
     final stock = int.tryParse(_stockCtrl.text.trim()) ?? 0;
@@ -210,40 +342,68 @@ class _EntradasScreenState extends State<EntradasScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(
-                            labelText: 'Proveedor (Opcional)',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: _proveedores
-                              .map(
-                                (p) => DropdownMenuItem(
-                                  value: p.id,
-                                  child: Text(p.nombre),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                decoration: InputDecoration(
+                                  labelText: _cargandoCatalogos
+                                      ? 'Cargando proveedores...'
+                                      : 'Proveedor (Opcional)',
+                                  border: const OutlineInputBorder(),
                                 ),
-                              )
-                              .toList(),
-                          onChanged: (val) =>
-                              setState(() => _selectedProv = val),
-                          value: _selectedProv,
+                                items: _proveedores
+                                    .map(
+                                      (p) => DropdownMenuItem(
+                                        value: p.id,
+                                        child: Text(p.nombre),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => _selectedProv = val),
+                                value: _selectedProv,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            IconButton.filledTonal(
+                              tooltip: 'Agregar proveedor nuevo',
+                              onPressed: _mostrarDialogoNuevoProveedor,
+                              icon: const Icon(Icons.add),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 20),
-                        DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(
-                            labelText: 'Ubicación Física (Opcional)',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: _ubicaciones
-                              .map(
-                                (u) => DropdownMenuItem(
-                                  value: u.id,
-                                  child: Text(u.nombre),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                decoration: InputDecoration(
+                                  labelText: _cargandoCatalogos
+                                      ? 'Cargando ubicaciones...'
+                                      : 'Ubicación Física (Opcional)',
+                                  border: const OutlineInputBorder(),
                                 ),
-                              )
-                              .toList(),
-                          onChanged: (val) =>
-                              setState(() => _selectedUbi = val),
-                          value: _selectedUbi,
+                                items: _ubicaciones
+                                    .map(
+                                      (u) => DropdownMenuItem(
+                                        value: u.id,
+                                        child: Text(u.nombre),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => _selectedUbi = val),
+                                value: _selectedUbi,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            IconButton.filledTonal(
+                              tooltip: 'Agregar ubicación nueva',
+                              onPressed: _mostrarDialogoNuevaUbicacion,
+                              icon: const Icon(Icons.add),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 40),
                         ElevatedButton.icon(

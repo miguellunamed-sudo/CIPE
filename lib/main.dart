@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
-import 'database/db_connection.dart';
 import 'screens/main_layout.dart';
 
 void main() async {
@@ -17,15 +16,6 @@ void main() async {
     await windowManager.focus();
     await windowManager.maximize(); 
   });
-
-  print('⏳ Intentando conectar a la base de datos...');
-  try {
-    final connection = await DbConnection.connect();
-    print('✅ ¡Conexión exitosa a PostgreSQL!');
-    await connection.close();
-  } catch (e) {
-    print('❌ Error al conectar: $e');
-  }
 
   runApp(const PapeleriaApp());
 }
