@@ -3,8 +3,10 @@ import 'package:papeleria_app/models/user_session.dart';
 import 'package:papeleria_app/screens/entradas_screen.dart';
 import 'package:papeleria_app/screens/historial_ventas_screen.dart';
 import 'package:papeleria_app/screens/inventory_screen.dart';
+import 'package:papeleria_app/screens/kardex_screen.dart';
 import 'package:papeleria_app/screens/login_screen.dart';
 import 'package:papeleria_app/screens/ventas_screen.dart';
+import 'package:papeleria_app/screens/corte_caja_screen.dart';
 
 class MainLayout extends StatefulWidget {
   final VoidCallback onThemeToggle;
@@ -28,6 +30,8 @@ class _MainLayoutState extends State<MainLayout> {
     InventoryScreen(),
     EntradasScreen(),
     HistorialVentasScreen(),
+    CorteCajaScreen(),
+    KardexScreen(),
   ];
 
   @override
@@ -45,6 +49,17 @@ class _MainLayoutState extends State<MainLayout> {
               decoration: const BoxDecoration(color: Colors.blueAccent),
               child: Center(child: Image.asset('assets/LOGO.png')),
             ),
+            if (UserSession.current != null)
+              ListTile(
+                leading: Icon(
+                  UserSession.current!.isAdmin
+                      ? Icons.admin_panel_settings
+                      : Icons.badge,
+                  color: Colors.blueAccent,
+                ),
+                title: Text(UserSession.current!.nombreCompleto),
+                subtitle: Text('Rol: ${UserSession.current!.rol}'),
+              ),
             ListTile(
               leading: const Icon(Icons.point_of_sale),
               title: const Text('Punto de Venta'),
@@ -81,17 +96,24 @@ class _MainLayoutState extends State<MainLayout> {
                 Navigator.pop(context);
               },
             ),
-            if (UserSession.current != null)
-              ListTile(
-                leading: Icon(
-                  UserSession.current!.isAdmin
-                      ? Icons.admin_panel_settings
-                      : Icons.badge,
-                  color: Colors.blueAccent,
-                ),
-                title: Text(UserSession.current!.nombreCompleto),
-                subtitle: Text('Rol: ${UserSession.current!.rol}'),
-              ),
+            ListTile(
+              leading: const Icon(Icons.calculate),
+              title: const Text('Corte de Caja'),
+              selected: _selectedIndex == 4,
+              onTap: () {
+                setState(() => _selectedIndex = 4);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.swap_vert_circle),
+              title: const Text('Kardex / Movimientos'),
+              selected: _selectedIndex == 5,
+              onTap: () {
+                setState(() => _selectedIndex = 5);
+                Navigator.pop(context);
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.redAccent),
               title: const Text('Cerrar Sesión'),

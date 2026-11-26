@@ -255,4 +255,83 @@ class ApiService {
       );
     }
   }
+
+  // 12. Consultar turno de caja activo
+  static Future<dynamic> getCorteActivo() async {
+    final uri = Uri.parse('$baseUrl/api/cortes/activo');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Error al consultar caja (${response.statusCode})');
+    }
+  }
+
+  // 13. Abrir caja
+  static Future<dynamic> abrirCaja({required double montoInicial}) async {
+    final uri = Uri.parse('$baseUrl/api/cortes/abrir');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'montoInicial': montoInicial,
+        'idUsuario': UserSession.current?.idUsuario,
+      }),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception(response.body.isNotEmpty
+          ? response.body
+          : 'Error al abrir caja (${response.statusCode})');
+    }
+  }
+
+  // 14. Cerrar caja
+  static Future<dynamic> cerrarCaja({
+    required int idCorte,
+    required double montoFinalReal,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/cortes/$idCorte/cerrar');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'montoFinalReal': montoFinalReal,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception(response.body.isNotEmpty
+          ? response.body
+          : 'Error al cerrar caja (${response.statusCode})');
+    }
+  }
+
+  // 15. Listar historial de cortes
+  static Future<List<dynamic>> getHistorialCortes() async {
+    final uri = Uri.parse('$baseUrl/api/cortes');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else {
+      throw Exception('Error al cargar historial de cortes (${response.statusCode})');
+    }
+  }
+  // 16. Listar movimientos de inventario (Kardex)
+  static Future<dynamic> getMovimientos() async {
+    final uri = Uri.parse('$baseUrl/api/movimientos');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else {
+      throw Exception('Error al cargar Kardex (${response.statusCode})');
+    }
+  }
 }
