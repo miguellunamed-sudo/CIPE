@@ -161,4 +161,70 @@ class ApiService {
       throw Exception('Error al cargar ventas (${response.statusCode})');
     }
   }
+  
+  // 8. Surtir stock a un artículo existente (suma stock + registra ENTRADA en Kardex)
+  static Future<Product> surtirStock({
+    required int idArticulo,
+    required int cantidad,
+    String motivo = 'Reabastecimiento de mercancía',
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/articulos/$idArticulo/surtir');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'cantidad': cantidad,
+        'motivo': motivo,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    } else {
+      throw Exception('Error al surtir (${response.statusCode}): ${response.body}');
+    }
+  }
+
+  // 9. Editar artículo existente
+  static Future<Product> updateProduct({
+    required int idArticulo,
+    required String nombre,
+    String? codigoBarras,
+    required double costoCompra,
+    required double margenGanancia,
+    required double precioFinal,
+    required int stockMinimo,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/articulos/$idArticulo');
+    final response = await http.put(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'nombre': nombre,
+        'codigoBarras': codigoBarras,
+        'costoCompra': costoCompra,
+        'margenGanancia': margenGanancia,
+        'precioFinal': precioFinal,
+        'stockMinimo': stockMinimo,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    } else {
+      throw Exception('Error al actualizar (${response.statusCode}): ${response.body}');
+    }
+  }
+
+  // 10. Eliminar artículo
+  static Future<void> deleteProduct(int idArticulo) async {
+    final uri = Uri.parse('$baseUrl/api/articulos/$idArticulo');
+    final response = await http.delete(uri);
+
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception(response.body.isNotEmpty
+          ? response.body
+          : 'Error al eliminar (${response.statusCode})');
+    }
+  }
 }
