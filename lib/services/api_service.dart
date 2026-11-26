@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:papeleria_app/models/product_model.dart';
+import 'package:papeleria_app/models/user_session.dart';
 
 class ApiService {
   static const String baseUrl = 'https://cipe-backend.onrender.com';
@@ -225,6 +226,33 @@ class ApiService {
       throw Exception(response.body.isNotEmpty
           ? response.body
           : 'Error al eliminar (${response.statusCode})');
+    }
+  }
+
+  // 11. Iniciar sesión
+  static Future<UserSession> login({
+    required String username,
+    required String password,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/auth/login');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'username': username,
+        'password': password,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final session = UserSession.fromJson(data);
+      UserSession.current = session;
+      return session;
+    } else {
+      throw Exception(
+        response.body.isNotEmpty ? response.body : 'Credenciales inválidas',
+      );
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:papeleria_app/screens/login_screen.dart';
 import 'package:window_manager/window_manager.dart';
 import 'screens/main_layout.dart';
 
@@ -89,7 +90,7 @@ class _PapeleriaAppState extends State<PapeleriaApp> {
       title: 'Sistema Papelería',
       theme: _currentTheme,
       // Mantiene tu layout original con Inventario Total y el botón de tema
-      home: MainLayout(onThemeToggle: toggleTheme, isUltraDark: _isUltraDark),
+      home: LoginScreen(onThemeToggle: toggleTheme, isUltraDark: _isUltraDark),
     );
   }
 }
