@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:papeleria_app/models/product_model.dart';
+import 'package:papeleria_app/models/user_session.dart';
 import 'package:papeleria_app/services/api_service.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -73,8 +74,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Stock actual: ${p.stockActual} unidades',
-                style: const TextStyle(color: Colors.grey)),
+            Text(
+              'Stock actual: ${p.stockActual} unidades',
+              style: const TextStyle(color: Colors.grey),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: cantCtrl,
@@ -120,8 +123,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 }
               }
             },
-            child: const Text('Sumar al Stock',
-                style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Sumar al Stock',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -209,7 +214,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 Text(
                   'Nuevo Precio Público: \$${calcularPrecio().toStringAsFixed(2)}',
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, color: Colors.green),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -239,7 +246,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ? null
                         : codigoCtrl.text.trim(),
                     costoCompra: double.tryParse(costoCtrl.text.trim()) ?? 0,
-                    margenGanancia: double.tryParse(margenCtrl.text.trim()) ?? 0,
+                    margenGanancia:
+                        double.tryParse(margenCtrl.text.trim()) ?? 0,
                     precioFinal: calcularPrecio(),
                     stockMinimo: int.tryParse(minCtrl.text.trim()) ?? 1,
                   );
@@ -247,7 +255,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 } catch (e) {
                   if (ctx.mounted) {
                     ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text('$e'), backgroundColor: Colors.red),
+                      SnackBar(
+                        content: Text('$e'),
+                        backgroundColor: Colors.red,
+                      ),
                     );
                   }
                 }
@@ -286,7 +297,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -350,65 +364,77 @@ class _InventoryScreenState extends State<InventoryScreen> {
               child: _cargando
                   ? const Center(child: CircularProgressIndicator())
                   : _filtrados.isEmpty
-                      ? const Center(child: Text('No hay productos registrados'))
-                      : ListView.separated(
-                          itemCount: _filtrados.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final p = _filtrados[index];
-                            final bajoStock = p.stockActual <= p.stockMinimo;
-                            return ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: bajoStock
-                                    ? Colors.redAccent
-                                    : Colors.blueAccent,
-                                child: Text(
-                                  '${p.stockActual}',
-                                  style: const TextStyle(color: Colors.white),
+                  ? const Center(child: Text('No hay productos registrados'))
+                  : ListView.separated(
+                      itemCount: _filtrados.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final p = _filtrados[index];
+                        final bajoStock = p.stockActual <= p.stockMinimo;
+                        final esAdmin = UserSession.current?.isAdmin ?? false;
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: bajoStock
+                                ? Colors.redAccent
+                                : Colors.blueAccent,
+                            child: Text(
+                              '${p.stockActual}',
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          title: Text(
+                            p.nombre,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            esAdmin
+                                ? 'Código: ${p.codigoBarras ?? "Sin código"} | Costo: \$${p.costoCompra.toStringAsFixed(2)} | Mín: ${p.stockMinimo}'
+                                : 'Código: ${p.codigoBarras ?? "Sin código"} | Stock mínimo: ${p.stockMinimo}',
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '\$${p.precioVenta.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
                                 ),
                               ),
-                              title: Text(
-                                p.nombre,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              const SizedBox(width: 12),
+                              IconButton(
+                                tooltip: 'Surtir stock',
+                                icon: const Icon(
+                                  Icons.add_circle,
+                                  color: Colors.green,
+                                ),
+                                onPressed: () => _dialogoSurtir(p),
                               ),
-                              subtitle: Text(
-                                'Código: ${p.codigoBarras ?? "Sin código"} | Costo: \$${p.costoCompra.toStringAsFixed(2)} | Mín: ${p.stockMinimo}',
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '\$${p.precioVenta.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
-                                    ),
+                              if (esAdmin) ...[
+                                IconButton(
+                                  tooltip: 'Editar producto',
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blueAccent,
                                   ),
-                                  const SizedBox(width: 12),
-                                  IconButton(
-                                    tooltip: 'Surtir stock',
-                                    icon: const Icon(Icons.add_circle,
-                                        color: Colors.green),
-                                    onPressed: () => _dialogoSurtir(p),
+                                  onPressed: () => _dialogoEditar(p),
+                                ),
+                                IconButton(
+                                  tooltip: 'Eliminar producto',
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.redAccent,
                                   ),
-                                  IconButton(
-                                    tooltip: 'Editar producto',
-                                    icon: const Icon(Icons.edit,
-                                        color: Colors.blueAccent),
-                                    onPressed: () => _dialogoEditar(p),
-                                  ),
-                                  IconButton(
-                                    tooltip: 'Eliminar producto',
-                                    icon: const Icon(Icons.delete_outline,
-                                        color: Colors.redAccent),
-                                    onPressed: () => _confirmarEliminar(p),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                                  onPressed: () => _confirmarEliminar(p),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

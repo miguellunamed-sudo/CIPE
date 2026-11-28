@@ -7,6 +7,7 @@ import 'package:papeleria_app/screens/kardex_screen.dart';
 import 'package:papeleria_app/screens/login_screen.dart';
 import 'package:papeleria_app/screens/ventas_screen.dart';
 import 'package:papeleria_app/screens/corte_caja_screen.dart';
+import 'package:papeleria_app/screens/usuarios_screen.dart';
 
 class MainLayout extends StatefulWidget {
   final VoidCallback onThemeToggle;
@@ -32,6 +33,7 @@ class _MainLayoutState extends State<MainLayout> {
     HistorialVentasScreen(),
     CorteCajaScreen(),
     KardexScreen(),
+    UsuariosScreen(),
   ];
 
   @override
@@ -78,6 +80,7 @@ class _MainLayoutState extends State<MainLayout> {
                 Navigator.pop(context);
               },
             ),
+            if (UserSession.current?.isAdmin == true)
             ListTile(
               leading: const Icon(Icons.add_box),
               title: const Text('Nueva Mercancía'),
@@ -114,6 +117,16 @@ class _MainLayoutState extends State<MainLayout> {
                 Navigator.pop(context);
               },
             ),
+            if (UserSession.current?.isAdmin == true)
+              ListTile(
+                leading: const Icon(Icons.manage_accounts),
+                title: const Text('Usuarios y Roles'),
+                selected: _selectedIndex == 6,
+                onTap: () {
+                  setState(() => _selectedIndex = 6);
+                  Navigator.pop(context);
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.redAccent),
               title: const Text('Cerrar Sesión'),

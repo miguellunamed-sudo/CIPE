@@ -162,7 +162,7 @@ class ApiService {
       throw Exception('Error al cargar ventas (${response.statusCode})');
     }
   }
-  
+
   // 8. Surtir stock a un artículo existente (suma stock + registra ENTRADA en Kardex)
   static Future<Product> surtirStock({
     required int idArticulo,
@@ -173,16 +173,17 @@ class ApiService {
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'cantidad': cantidad,
-        'motivo': motivo,
-      }),
+      body: jsonEncode({'cantidad': cantidad, 'motivo': motivo}),
     );
 
     if (response.statusCode == 200) {
-      return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      return Product.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
     } else {
-      throw Exception('Error al surtir (${response.statusCode}): ${response.body}');
+      throw Exception(
+        'Error al surtir (${response.statusCode}): ${response.body}',
+      );
     }
   }
 
@@ -211,9 +212,13 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      return Product.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
     } else {
-      throw Exception('Error al actualizar (${response.statusCode}): ${response.body}');
+      throw Exception(
+        'Error al actualizar (${response.statusCode}): ${response.body}',
+      );
     }
   }
 
@@ -223,9 +228,11 @@ class ApiService {
     final response = await http.delete(uri);
 
     if (response.statusCode != 204 && response.statusCode != 200) {
-      throw Exception(response.body.isNotEmpty
-          ? response.body
-          : 'Error al eliminar (${response.statusCode})');
+      throw Exception(
+        response.body.isNotEmpty
+            ? response.body
+            : 'Error al eliminar (${response.statusCode})',
+      );
     }
   }
 
@@ -238,10 +245,7 @@ class ApiService {
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-      }),
+      body: jsonEncode({'username': username, 'password': password}),
     );
 
     if (response.statusCode == 200) {
@@ -283,9 +287,11 @@ class ApiService {
     if (response.statusCode == 201 || response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception(response.body.isNotEmpty
-          ? response.body
-          : 'Error al abrir caja (${response.statusCode})');
+      throw Exception(
+        response.body.isNotEmpty
+            ? response.body
+            : 'Error al abrir caja (${response.statusCode})',
+      );
     }
   }
 
@@ -298,17 +304,17 @@ class ApiService {
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'montoFinalReal': montoFinalReal,
-      }),
+      body: jsonEncode({'montoFinalReal': montoFinalReal}),
     );
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception(response.body.isNotEmpty
-          ? response.body
-          : 'Error al cerrar caja (${response.statusCode})');
+      throw Exception(
+        response.body.isNotEmpty
+            ? response.body
+            : 'Error al cerrar caja (${response.statusCode})',
+      );
     }
   }
 
@@ -320,9 +326,12 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as List<dynamic>;
     } else {
-      throw Exception('Error al cargar historial de cortes (${response.statusCode})');
+      throw Exception(
+        'Error al cargar historial de cortes (${response.statusCode})',
+      );
     }
   }
+
   // 16. Listar movimientos de inventario (Kardex)
   static Future<dynamic> getMovimientos() async {
     final uri = Uri.parse('$baseUrl/api/movimientos');
@@ -332,6 +341,86 @@ class ApiService {
       return jsonDecode(response.body) as List<dynamic>;
     } else {
       throw Exception('Error al cargar Kardex (${response.statusCode})');
+    }
+  }
+
+  // 17. Listar todos los usuarios
+  static Future<List<dynamic>> getUsuarios() async {
+    final uri = Uri.parse('$baseUrl/api/auth/usuarios');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else {
+      throw Exception('Error al cargar usuarios (${response.statusCode})');
+    }
+  }
+
+  // 18. Crear nuevo usuario (Administrador o Empleado)
+  static Future<dynamic> createUsuario({
+    required String nombreCompleto,
+    required String username,
+    required String password,
+    required String rol,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/auth/usuarios');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'nombreCompleto': nombreCompleto,
+        'username': username,
+        'password': password,
+        'rol': rol,
+      }),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception(
+        response.body.isNotEmpty
+            ? response.body
+            : 'Error al crear usuario (${response.statusCode})',
+      );
+    }
+  }
+
+  // 19. Restablecer contraseña de un usuario
+  static Future<void> resetUsuarioPassword({
+    required int idUsuario,
+    required String newPassword,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/auth/usuarios/$idUsuario/password');
+    final response = await http.put(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'password': newPassword}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        response.body.isNotEmpty
+            ? response.body
+            : 'Error al cambiar contraseña (${response.statusCode})',
+      );
+    }
+  }
+
+  // 20. Activar / desactivar usuario
+  static Future<void> toggleUsuarioEstado({
+    required int idUsuario,
+    required bool activo,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/auth/usuarios/$idUsuario/estado');
+    final response = await http.put(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'activo': activo}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Error al actualizar estado (${response.statusCode})');
     }
   }
 }
